@@ -2,7 +2,7 @@
 
 public class GameActionProviderBase: IGameActionProvider
 {
-    public IChatClient chat;
+    public IChatClient? chat;
     public readonly string promptTemplate = @"Act as a video game player, with high expertise playing Retro Invaders.
     Your main objective is to kill all the enemy ships while avoiding enemy projectiles. Prioritize eliminating enemy ships over just surviving. Do not get stuck in the corners: if the player ship is at the leftmost or rightmost edge, do not stay there for long, even if it is temporarily safe from enemy attacks, because you will never win the game by staying in a corner.
     You can fire up to 3 times in a row (up to 3 bullets on screen at once). Firing (shooting) is essential to win: fire as often as possible when it is safe and there is a clear shot at an enemy. Do not hesitate to shoot if you have a chance to hit an enemy and you are not in immediate danger.
@@ -33,8 +33,21 @@ public class GameActionProviderBase: IGameActionProvider
             new(ChatRole.User, [aic1])
         };
 
-        var completionUpdates = await chat.GetResponseAsync(messages);
-        llmResponse = completionUpdates.Text;
+        if (chat == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var completionUpdates = await chat.GetResponseAsync(messages);
+            llmResponse = completionUpdates.Text;
+        }
+        catch (Exception)
+        {
+            // If the provider call fails (e.g., model missing, server down), return null to avoid crashing the game
+            return null;
+        }
 
         llmResponse = CleanLlmJsonResponse(llmResponse);
         try
@@ -49,7 +62,7 @@ public class GameActionProviderBase: IGameActionProvider
     }
 
     public async virtual Task<GameActionResult?> AnalyzeFrameWithStringsAsync(string frame1, string lastAction) {
-        string prompt = string.Format(promptTemplate, lastAction);
+    string prompt = string.Format(promptTemplate, lastAction);
         string llmResponse = string.Empty;
 
         List<ChatMessage> messages = new()
@@ -58,8 +71,28 @@ public class GameActionProviderBase: IGameActionProvider
             new(ChatRole.User, frame1)
         };
 
-        var completionUpdates = await chat.GetResponseAsync(messages);
-        llmResponse = completionUpdates.Text;
+        try
+        {
+            if (chat == null)
+            {
+                return null;
+            }
+            try
+            {
+                var completionUpdates = await chat.GetResponseAsync(messages);
+                llmResponse = completionUpdates.Text;
+            }
+            catch (Exception)
+            {
+                // If the provider call fails (e.g., model missing, server down), return null to avoid crashing the game
+                return null;
+            }
+        }
+        catch (Exception)
+        {
+            // If the provider call fails (e.g., model missing, server down), return null to avoid crashing the game
+            return null;
+        }
 
         llmResponse = CleanLlmJsonResponse(llmResponse);
         try
@@ -80,7 +113,7 @@ public class GameActionProviderBase: IGameActionProvider
         var lines = llmResponse.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
         int start = System.Array.FindIndex(lines, l => l.TrimStart().StartsWith("{"));
         int end = System.Array.FindLastIndex(lines, l => l.TrimEnd().EndsWith("}"));
-        string json = null;
+        string json;
         if (start >= 0 && end >= start)
         {
             var jsonLines = lines[start..(end + 1)];

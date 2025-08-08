@@ -133,9 +133,28 @@ public static class GameManager
                 }
                 else
                 {
-                    _aiProvider = new AoaiGameActionProvider(_aiEndpoint, _aiModelId, _aiApiKey);
-                    _aiState = AIState.Aoai;
-                    ClearAIInstructions();
+                    // Validate Azure OpenAI config before enabling
+                    if (string.IsNullOrWhiteSpace(_aiEndpoint) || string.IsNullOrWhiteSpace(_aiModelId) || string.IsNullOrWhiteSpace(_aiApiKey))
+                    {
+                        // Center a brief message in the AI panel
+                        var msg = "Azure OpenAI config missing: set endpoint/model/key";
+                        var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                        int minSpace = 2;
+                        int used = "AI".Length + minSpace + ts.Length + minSpace + msg.Length;
+                        int remaining = _frontBuffer.Cols - 4 - used;
+                        int leftPad = remaining > 0 ? remaining / 2 : 0;
+                        int rightPad = remaining > 0 ? remaining - leftPad : 0;
+                        _aiInstructions[0] = "AI" + new string(' ', minSpace + leftPad) + ts + new string(' ', minSpace + rightPad) + msg;
+                        _aiInstructions[1] = "Use User Secrets: AZURE_OPENAI_ENDPOINT / MODEL / APIKEY";
+                        _aiInstructions[2] = string.Empty;
+                        _aiInstructions[3] = string.Empty;
+                    }
+                    else
+                    {
+                        _aiProvider = new AoaiGameActionProvider(_aiEndpoint, _aiModelId, _aiApiKey);
+                        _aiState = AIState.Aoai;
+                        ClearAIInstructions();
+                    }
                 }
                 return;
             case ConsoleKey.O:

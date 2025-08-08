@@ -2,7 +2,8 @@
 
 public class OllamaGameActionProvider : GameActionProviderBase, IGameActionProvider
 {
-    public OllamaGameActionProvider(string model = "phi4-mini", string uriString = "http://localhost:11434")
+    // Default to a commonly available local chat model; can be overridden via constructor
+    public OllamaGameActionProvider(string model = "phi3.5:latest", string uriString = "http://localhost:11434")
     {
         Uri uri = new(uriString);
         var ollama = new OllamaApiClient(uri);
